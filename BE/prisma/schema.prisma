@@ -1,0 +1,238 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Address {
+  id        String   @id @default(uuid())
+  street    String?
+  city      String?
+  state     String?
+  country   String?
+  zipCode   String?
+  userId    String?  @unique
+  user      User?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city], map: "idx_address_city")
+  @@index([state], map: "idx_address_state")
+  @@index([country], map: "idx_address_country")
+}
+
+model Permission {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  roles       RolePermissions[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([name])
+}
+
+model Role {
+  id          String            @id @default(uuid())
+  name        String
+  permissions RolePermissions[]
+  users       User[]            @relation("userRole")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([name])
+  @@index([name], map: "idx_role_name")
+}
+
+model RolePermissions {
+  id           String @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model EducationDocuments {
+  id                          String   @id @default(uuid())
+  X_marksheet                 String?
+  XII_marksheet               String?
+  diploma_marksheet           String?
+  graduation_marksheet        String?
+  X_certificate               String?
+  XII_certificate             String?
+  diploma_certificate         String?
+  graduation_certificate      String?
+  post_graduation_certificate String?
+  phd_certificate             String?
+  other_documents             Json?
+  user                        User?    @relation("user_edu_docs")
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model JobApplication {
+  id          String            @id @default(uuid())
+  userId      String
+  jobId       String
+  resumeUrl   String
+  coverLetter String?
+  status      ApplicationStatus @default(applied)
+  appliedAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+  job  Job?  @relation(fields: [jobId], references: [id])
+
+  @@unique([jobId, userId], map: "uq_user_job_application")
+  @@index([userId], map: "idx_job_application_user")
+  @@index([jobId], map: "idx_job_application_job")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  established DateTime
+  owner       String
+  locations   String[]
+  headQuarter String?
+  recruiters  User[]   @relation("companyRecruiters")
+  jobs        Job[]
+  users       User[]   @relation("currentCompany")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name], map: "idx_company_name")
+}
+
+model Job {
+  id             String           @id @default(uuid())
+  title          String
+  description    String
+  postDate       DateTime         @default(now())
+  expiryDate     DateTime
+  experience     String
+  salaryRange    String?
+  workMode       String?
+  location       String?
+  category       String?
+  tags           String[]
+  status         JobStatus        @default(open)
+  approvalStatus ApprovalStatus   @default(pending)
+  applications   JobApplication[]
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  recruiterId String?
+  recruiter   User?   @relation(fields: [recruiterId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([title, location], map: "uq_job_title_location")
+  @@index([title], map: "idx_job_title")
+  @@index([location], map: "idx_job_location")
+  @@index([category], map: "idx_job_category")
+  @@index([companyId], map: "idx_job_company")
+  @@index([recruiterId], map: "idx_job_recruiter")
+}
+
+model BlockedMails {
+  id    String @id @default(uuid())
+  email String @unique
+}
+
+model Token {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id                String              @id @default(uuid())
+  firstName         String?
+  lastName          String?
+  email             String              @unique
+  password          String
+  addressId         String?             @unique
+  address           Address?            @relation(fields: [addressId], references: [id], map: "fk_user_address")
+  roleId            String
+  role              Role                @relation("userRole", fields: [roleId], references: [id])
+  dateOfBirth       DateTime?
+  profilePicture    String?
+  education_docs_id String?             @unique
+  education_docs    EducationDocuments? @relation("user_edu_docs", fields: [education_docs_id], references: [id])
+  skills            String[]
+  system_defined    Boolean             @default(false)
+  status            Statuses            @default(pending)
+  jobs              Job[]
+  applications      JobApplication[]
+  token             Token?
+  refreshTokens     RefreshToken[]
+
+  currCompanyId  String?  @unique
+  currentCompany Company? @relation("currentCompany", fields: [currCompanyId], references: [id])
+
+  previousCompanies   Json?
+  associatedCompanies Company[] @relation("companyRecruiters")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Statuses {
+  active
+  inactive
+  pending
+  blocked
+}
+
+enum JobStatus {
+  open
+  closed
+  expired
+}
+
+enum ApplicationStatus {
+  applied
+  viewed
+  accepted
+  rejected
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}

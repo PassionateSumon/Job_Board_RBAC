@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNEXT",
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": false,
+    "moduleResolution": "node",
+    "allowArbitraryExtensions": false,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "baseUrl": ".",
+    "types": ["node", "express"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
